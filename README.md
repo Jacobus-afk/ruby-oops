@@ -1,3 +1,3 @@
 # ruby-oops
 
-Two player command line tic tac toe
+* **tictactoe.rb** - Two player command line tic tac toe
