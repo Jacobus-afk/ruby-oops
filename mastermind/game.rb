@@ -43,7 +43,6 @@ end
 module Board
   COLORWORDS = %w[R G Y B P C].freeze
   COLORMETHODS = %i[red green yellow blue pink cyan black white].freeze
-
   def color_output(number)
     print '█ '.send(COLORMETHODS[number])
   end
@@ -53,38 +52,105 @@ module Board
   end
 end
 
-# mastermind game class
-class Game
-  include Board
-  attr_reader :game_over
-  def initialize
-    @code_word = []
-    @result_arr = []
-    @game_over = false
-    @attempts = 12
-  end
+# class for creator mode
+class CreatorGame
+  def initialize; end
+end
 
-  def generate_code
+# class for guesser mode
+class GuesserGame
+  include Board
+
+  def generate_code(code_word)
     4.times do
       tmp = rand(6)
-      @code_word.push(tmp)
+      code_word.push(tmp)
     end
     # puts 'Generated:'
     # show_colored_word(@code_word)
     # puts
   end
 
-  def handle_attempt(code_chars)
-    return false unless code_chars.length == 4
+  def guess_prompt
+    loop do
+      print 'your guess (R,G,B,Y,P,C): '
+      code_chars = gets.chomp.upcase.chars
+      return code_chars if code_chars.length == 4
 
-    code_nums = code_chars.upcase.chars.filter_map do |char|
-      number_output(char)
+      puts 'Invalid size (must be 4 letters)'
     end
-    return false unless code_nums.length == 4
+  end
 
-    show_colored_word(code_nums)
-    compare_guess_with_code(code_nums)
-    true
+  def generate_guess
+    loop do
+      code_nums = guess_prompt.filter_map do |char|
+        number_output(char)
+      end
+      return code_nums if code_nums.length == 4
+
+      puts 'Invalid character in attempt'
+    end
+  end
+
+  def handle_guess(guess, code_word, attempts, result_arr)
+    return "You've guessed correctly. Game over" if guess == code_word
+
+    return "You've run out of turns. Game over" if attempts.zero?
+
+    code_copy = code_word.dup
+    find_exact_matches(guess, code_copy, result_arr)
+    find_rel_matches(guess, code_copy, result_arr)
+    nil
+  end
+
+  def find_exact_matches(guess, code_copy, result_arr)
+    3.downto(0) do |i|
+      next unless guess[i] == code_copy[i]
+
+      result_arr.push(6)
+      guess.delete_at(i)
+      code_copy.delete_at(i)
+    end
+  end
+
+  def find_rel_matches(guess, code_copy, result_arr)
+    (code_copy.length - 1).downto(0) do |i|
+      num_match = code_copy.find_index(guess[i])
+      next unless num_match
+
+      result_arr.push(7)
+      guess[i] = nil
+      code_copy[num_match] = nil
+    end
+  end
+end
+
+# game class wrapper
+class Game
+  include Board
+  CREATOR = 'C'
+  GUESSER = 'G'
+  attr_reader :mode, :game_over_msg
+  def initialize(mode)
+    @mode = GuesserGame.new if mode == GUESSER
+    @guess_word = []
+    @code_word = []
+    @result_arr = []
+    @game_over_msg = nil
+    @attempts = 12
+  end
+
+  def generate_code
+    mode.generate_code(@code_word)
+  end
+
+  def generate_guess
+    @guess_word = mode.generate_guess
+    show_colored_word(@guess_word)
+    @result_arr = []
+    @attempts -= 1
+    @game_over_msg = mode.handle_guess(@guess_word, @code_word, @attempts, @result_arr)
+    print_attempt_resp
   end
 
   private
@@ -95,59 +161,9 @@ class Game
     end
   end
 
-  def find_exact_matches(guess, code_copy)
-    3.downto(0) do |i|
-      next unless guess[i] == code_copy[i]
-
-      @result_arr.push(6)
-      guess.delete_at(i)
-      code_copy.delete_at(i)
-    end
-  end
-
-  def find_rel_matches(guess, code_copy)
-    (code_copy.length - 1).downto(0) do |i|
-      num_match = code_copy.find_index(guess[i])
-      next unless num_match
-
-      @result_arr.push(7)
-      guess[i] = nil
-      code_copy[num_match] = nil
-    end
-  end
-
-  def print_result
+  def print_attempt_resp
     print "\t"
     show_colored_word(@result_arr.sort!)
     puts
-  end
-
-  def compare_guess_with_code(guess)
-    if guess == @code_word
-      puts "You've guessed correctly. Game over"
-      return @game_over = true
-    end
-    @result_arr = []
-    code_copy = @code_word.dup
-    find_exact_matches(guess, code_copy)
-    find_rel_matches(guess, code_copy)
-    print_result
-    # @result_arr = []
-    # tmp_answer = @code_word.dup
-    # 3.downto(0) do |i|
-    #   next unless guess[i] == tmp_answer[i]
-
-    #   @result_arr.push(6)
-    #   guess.delete_at(i)
-    #   tmp_answer.delete_at(i)
-    # end
-    # (tmp_answer.length - 1).downto(0) do |i|
-    #   num_match = tmp_answer.find_index(guess[i])
-    #   next unless num_match
-
-    #   @result_arr.push(7)
-    #   guess[i] = nil
-    #   tmp_answer[num_match] = nil
-    # end
   end
 end
