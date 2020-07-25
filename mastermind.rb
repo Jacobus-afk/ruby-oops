@@ -56,9 +56,11 @@ end
 # mastermind game class
 class Game
   include Board
+  attr_reader :game_over
   def initialize
     @code_word = []
     @result_arr = []
+    @game_over = false
   end
 
   def generate_code
@@ -66,8 +68,9 @@ class Game
       tmp = rand(6)
       @code_word.push(tmp)
     end
-    puts 'Generated:'
-    show_colored_word(@code_word)
+    # puts 'Generated:'
+    # show_colored_word(@code_word)
+    # puts
   end
 
   def handle_attempt(code_chars)
@@ -89,31 +92,41 @@ class Game
     word.each do |char|
       color_output(char)
     end
-    puts
+    # puts
   end
 
   def check_validity(guess)
+    if guess == @code_word
+      puts "You've guessed correctly. Game over"
+      return @game_over = true
+    end
+
     @result_arr = []
     tmp_answer = @code_word.dup
     3.downto(0) do |i|
-      if guess[i] == tmp_answer[i]
-        @result_arr.push(6)
-        guess[i] = nil
-        tmp_answer[i] = nil
-        # guess.delete_at(i)
-        # tmp_answer.delete_at(i)
-      else
-        num_match = tmp_answer.find_index(guess[i])
-        if num_match
-          @result_arr.push(7)
-          guess[i] = nil
-          tmp_answer[num_match] = nil
-          # guess.delete_at(num_match)
-          # tmp_answer.delete_at(i)
-        end
-      end
+      next unless guess[i] == tmp_answer[i]
+
+      @result_arr.push(6)
+      # guess[i] = nil
+      # tmp_answer[i] = nil
+      guess.delete_at(i)
+      tmp_answer.delete_at(i)
     end
+    (tmp_answer.length - 1).downto(0) do |i|
+      # num_match = tmp_answer.each_index.select { |x| tmp_answer[x] == guess[i] }
+      num_match = tmp_answer.find_index(guess[i])
+      next unless num_match
+
+      @result_arr.push(7)
+      guess[i] = nil
+      tmp_answer[num_match] = nil
+      # guess.delete_at(num_match)
+      # tmp_answer.delete_at(i)
+    end
+
+    print "\t"
     show_colored_word(@result_arr.sort!)
+    puts
 
     # tmp.delete_at(1)
     # puts
@@ -129,7 +142,7 @@ end
 game = Game.new
 game.generate_code
 
-loop do
+until game.game_over == true
   print 'your guess (R,G,B,Y,P,C): '
   code = gets.chomp
   puts 'Invalid attempt' unless game.handle_attempt(code)
