@@ -68,6 +68,7 @@ class CreatorGame
   end
 
   # https://github.com/nattydredd/Mastermind-Five-Guess-Algorithm/blob/master/Five-Guess-Algorithm.cpp
+  # https://puzzling.stackexchange.com/questions/546/clever-ways-to-solve-mastermind
   def generate_code_list(pos = 0, array = [0, 0, 0, 0])
     if pos >= 4
       @code_list.push(array.dup)
@@ -108,11 +109,6 @@ class CreatorGame
       guess_copy = @code_list[i].dup
       find_exact_matches(guess_copy, code_copy, result_arr)
       find_rel_matches(guess_copy, code_copy, result_arr)
-
-      # if i == 18
-      #   puts
-      # end
-
       @code_list.delete_at(i) if result_arr != @prev_result_ref
     end
   end
@@ -124,12 +120,6 @@ class CreatorGame
       @code_list.delete_at(@code_list.find_index(@guess))
       return @guess
     end
-    # code_word = []
-    # 4.times do
-    #   tmp = rand(6)
-    #   code_word.push(tmp)
-    # end
-    # code_word
     discard_invalid_results
 
     @guess = @code_list[0]
