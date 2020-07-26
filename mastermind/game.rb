@@ -54,18 +54,83 @@ end
 
 # class for creator mode
 class CreatorGame
-  def initialize; end
+  include Board
+
+  def code_prompt
+    loop do
+      print 'Your code word (R,G,B,Y,P,C): '
+      code_chars = gets.chomp.upcase.chars
+      return code_chars if code_chars.length == 4
+
+      puts 'Invalid size (must be 4 letters)'
+    end
+  end
+
+  def generate_code
+    loop do
+      code_nums = code_prompt.filter_map do |char|
+        number_output(char)
+      end
+      return code_nums if code_nums.length == 4
+
+      puts 'Invalid character in attempt'
+    end
+  end
+
+  def generate_guess
+    puts "PC's guess: "
+    code_word = []
+    4.times do
+      tmp = rand(6)
+      code_word.push(tmp)
+    end
+    code_word
+  end
+
+  def handle_guess(guess, code_word, attempts, result_arr)
+    return 'PC guessed correctly. Game over' if guess == code_word
+
+    return 'PC ran out of turns. Game over' if attempts.zero?
+
+    code_copy = code_word.dup
+    find_exact_matches(guess, code_copy, result_arr)
+    find_rel_matches(guess, code_copy, result_arr)
+    nil
+  end
+
+  def find_exact_matches(guess, code_copy, result_arr)
+    3.downto(0) do |i|
+      next unless guess[i] == code_copy[i]
+
+      result_arr.push(6)
+      guess.delete_at(i)
+      code_copy.delete_at(i)
+    end
+  end
+
+  def find_rel_matches(guess, code_copy, result_arr)
+    (code_copy.length - 1).downto(0) do |i|
+      num_match = code_copy.find_index(guess[i])
+      next unless num_match
+
+      result_arr.push(7)
+      guess[i] = nil
+      code_copy[num_match] = nil
+    end
+  end
 end
 
 # class for guesser mode
 class GuesserGame
   include Board
 
-  def generate_code(code_word)
+  def generate_code
+    code_word = []
     4.times do
       tmp = rand(6)
       code_word.push(tmp)
     end
+    code_word
     # puts 'Generated:'
     # show_colored_word(@code_word)
     # puts
@@ -73,7 +138,7 @@ class GuesserGame
 
   def guess_prompt
     loop do
-      print 'your guess (R,G,B,Y,P,C): '
+      print 'Your guess (R,G,B,Y,P,C): '
       code_chars = gets.chomp.upcase.chars
       return code_chars if code_chars.length == 4
 
@@ -133,6 +198,7 @@ class Game
   attr_reader :mode, :game_over_msg
   def initialize(mode)
     @mode = GuesserGame.new if mode == GUESSER
+    @mode = CreatorGame.new if mode == CREATOR
     @guess_word = []
     @code_word = []
     @result_arr = []
@@ -141,7 +207,7 @@ class Game
   end
 
   def generate_code
-    mode.generate_code(@code_word)
+    @code_word = mode.generate_code
   end
 
   def generate_guess
