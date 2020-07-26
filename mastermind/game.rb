@@ -43,6 +43,8 @@ end
 module Board
   COLORWORDS = %w[R G Y B P C].freeze
   COLORMETHODS = %i[red green yellow blue pink cyan black white].freeze
+  EXACT_MATCH = 6
+  REL_MATCH = 7
   def color_output(number)
     print '█ '.send(COLORMETHODS[number])
   end
@@ -55,6 +57,28 @@ end
 # class for creator mode
 class CreatorGame
   include Board
+
+  def initialize
+    @code_list = []
+    generate_code_list
+    @guess = [0, 0, 1, 1]
+    @prev_result_ref = []
+    @first_guess = true
+    puts
+  end
+
+  # https://github.com/nattydredd/Mastermind-Five-Guess-Algorithm/blob/master/Five-Guess-Algorithm.cpp
+  def generate_code_list(pos = 0, array = [0, 0, 0, 0])
+    if pos >= 4
+      @code_list.push(array.dup)
+      return
+    end
+
+    (0..5).each do |i|
+      array[pos] = i
+      generate_code_list(pos + 1, array)
+    end
+  end
 
   def code_prompt
     loop do
@@ -77,14 +101,40 @@ class CreatorGame
     end
   end
 
+  def discard_invalid_results
+    (@code_list.length - 1).downto(0) do |i|
+      result_arr = []
+      code_copy = @guess.dup
+      guess_copy = @code_list[i].dup
+      find_exact_matches(guess_copy, code_copy, result_arr)
+      find_rel_matches(guess_copy, code_copy, result_arr)
+
+      # if i == 18
+      #   puts
+      # end
+
+      @code_list.delete_at(i) if result_arr != @prev_result_ref
+    end
+  end
+
   def generate_guess
     puts "PC's guess: "
-    code_word = []
-    4.times do
-      tmp = rand(6)
-      code_word.push(tmp)
+    if @first_guess
+      @first_guess = false
+      @code_list.delete_at(@code_list.find_index(@guess))
+      return @guess
     end
-    code_word
+    # code_word = []
+    # 4.times do
+    #   tmp = rand(6)
+    #   code_word.push(tmp)
+    # end
+    # code_word
+    discard_invalid_results
+
+    @guess = @code_list[0]
+    @code_list.delete_at(0)
+    @guess
   end
 
   def handle_guess(guess, code_word, attempts, result_arr)
@@ -93,8 +143,10 @@ class CreatorGame
     return 'PC ran out of turns. Game over' if attempts.zero?
 
     code_copy = code_word.dup
-    find_exact_matches(guess, code_copy, result_arr)
-    find_rel_matches(guess, code_copy, result_arr)
+    guess_copy = guess.dup
+    find_exact_matches(guess_copy, code_copy, result_arr)
+    find_rel_matches(guess_copy, code_copy, result_arr)
+    @prev_result_ref = result_arr
     nil
   end
 
@@ -102,7 +154,7 @@ class CreatorGame
     3.downto(0) do |i|
       next unless guess[i] == code_copy[i]
 
-      result_arr.push(6)
+      result_arr.push(EXACT_MATCH)
       guess.delete_at(i)
       code_copy.delete_at(i)
     end
@@ -113,7 +165,7 @@ class CreatorGame
       num_match = code_copy.find_index(guess[i])
       next unless num_match
 
-      result_arr.push(7)
+      result_arr.push(REL_MATCH)
       guess[i] = nil
       code_copy[num_match] = nil
     end
@@ -172,7 +224,7 @@ class GuesserGame
     3.downto(0) do |i|
       next unless guess[i] == code_copy[i]
 
-      result_arr.push(6)
+      result_arr.push(EXACT_MATCH)
       guess.delete_at(i)
       code_copy.delete_at(i)
     end
@@ -183,7 +235,7 @@ class GuesserGame
       num_match = code_copy.find_index(guess[i])
       next unless num_match
 
-      result_arr.push(7)
+      result_arr.push(REL_MATCH)
       guess[i] = nil
       code_copy[num_match] = nil
     end
@@ -229,7 +281,7 @@ class Game
 
   def print_attempt_resp
     print "\t"
-    show_colored_word(@result_arr.sort!)
+    show_colored_word(@result_arr)
     puts
   end
 end

@@ -5,7 +5,7 @@ require_relative 'mastermind/game.rb'
 mode = nil
 
 until %w[G C].include? mode
-  print 'creator or guesser (G/C)? '
+  print 'Creator or guesser (G/C)? '
   mode = gets[0].upcase
 end
 
